@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Task management</title>
+
+<style>
+table {
+  width: 250px;
+  margin-top: 40px;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+
+th, td {
+  text-align: center;
+}
+
+#testbox {
+  margin-top: 20px;
+}
+</style>
+
+</head>
+<body>
+
+<h1>Task Management App</h1>
+
+<div id="testbox">
+    <input type="text" id="input" placeholder="Enter task..." />
+    <button onclick="addTask()">Submit</button>
+</div>
+
+<table>
+    <tr>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Role</th>
+        <th>Due Date</th>
+    </tr>
+    <tbody id="taskTable"></tbody>
+</table>
+
+<script>
+function addTask() {
+    const text = document.getElementById("input").value.trim();
+    if (text === "") return;
+
+    const table = document.getElementById("taskTable");
+    const row = document.createElement("tr");
+
+    const taskCell = document.createElement("td");
+    taskCell.textContent = text;
+
+    const statusCell = document.createElement("td");
+    const selectBox = document.createElement("select");
+
+    const options = ["Select...", "Complete", "Not Done", "In Progress"];
+    options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        selectBox.appendChild(option);
+    });
+
+    statusCell.appendChild(selectBox);
+
+ 
+
+     const roleCell = document.createElement("td");
+
+
+          roleCell.style.display = "flex";
+      roleCell.style.flexDirection = "column";
+          roleCell.style.alignItems = "flex-start";
+     
+
+     const roles = ["Julian", "Tamarra", "Andrew"];
+
+roles.forEach(role => {
+  const label = document.createElement("label");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = role;
+
+  label.appendChild(checkbox);
+  label.append(" " + role + " ");
+  roleCell.appendChild(label);
+});
+
+const dataCell = document.createElement("td");
+const dataInput = document.createElement("input");
+dataInput.type = "date";
+dataCell.appendChild(dataInput);
+
+
+  row.appendChild(taskCell);
+    row.appendChild(statusCell);
+    row.appendChild(roleCell);
+    row.appendChild(dataCell);
+      table.appendChild(row);
+
+    document.getElementById("input").value = "";
+
+}
+
+
+
+</script>
+
+</body>
+</html>
