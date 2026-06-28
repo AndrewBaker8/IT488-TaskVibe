@@ -7,6 +7,13 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+        <Button Content="Test DB Connection" 
+                HorizontalAlignment="Left" 
+                VerticalAlignment="Top" 
+                Width="150" 
+                Height="30" 
+                Margin="20" 
+                Click="TestConnection_Click"/>
 
     </Grid>
 </Window>
