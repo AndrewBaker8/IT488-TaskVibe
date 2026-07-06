@@ -43,7 +43,6 @@ namespace TaskVibe.UI.Repositories
             }
         }
 
-        // --- Placeholders for the remaining interface methods ---
         public IEnumerable<TaskItem> GetAllTasks()
         {
             List<TaskItem> tasks = new List<TaskItem>();
