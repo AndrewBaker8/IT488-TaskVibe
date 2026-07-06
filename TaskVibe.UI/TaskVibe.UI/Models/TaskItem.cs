@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TaskVibe.Models
+namespace TaskVibe.UI.Models
 {
     public class TaskItem
     {

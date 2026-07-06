@@ -1,4 +1,4 @@
-﻿namespace TaskVibe.Models
+﻿namespace TaskVibe.UI.Models
 {
     public class User
     {
