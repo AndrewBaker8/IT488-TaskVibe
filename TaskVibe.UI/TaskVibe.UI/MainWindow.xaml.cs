@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows;
 using Microsoft.Data.SqlClient;
-using TaskVibe.UI.Data; // Updated to match your current namespace
+using TaskVibe.UI.Data; 
 
 namespace TaskVibe.UI
 {
