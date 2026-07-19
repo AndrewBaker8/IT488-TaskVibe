@@ -36,7 +36,11 @@
             </ComboBox>
 
             <!-- Create Task Button -->
-            <Button x:Name="BtnCreateTask" Content="Add Task" Height="35" Background="#007ACC" Foreground="White" FontWeight="Bold" Margin="0,0,0,10"/>
+            <Button x:Name="BtnCreateTask" Content="Add Task" Height="35" Background="#007ACC" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" Click="BtnCreateTask_Click"/>
+            <!-- Update Task Button -->
+            <Button x:Name="BtnUpdateTask" Content="Update Task" Click="BtnUpdateTask_Click" Margin="0,5,0,0" Height="30"/>
+            <!-- Delete Task Button -->
+            <Button x:Name="BtnDeleteTask" Content="Delete Task" Click="BtnDeleteTask_Click" Margin="0,5,0,0" Height="30" Background="#FFF0F0" Foreground="#C00000"/>
 
             <Separator Margin="0,15,0,15"/>
 
@@ -47,7 +51,7 @@
 
         <!-- RIGHT PANEL: Main Task Dashboard Grid -->
         <Grid Grid.Column="1" Margin="15">
-            <DataGrid x:Name="DgTasks" AutoGenerateColumns="True" AlternatingRowBackground="#F0F0F0" GridLinesVisibility="Horizontal"/>
+            <DataGrid x:Name="DgTasks" AutoGenerateColumns="True" AutoGeneratingColumn="DgTasks_AutoGeneratingColumn" SelectionChanged="DgTasks_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow" IsReadOnly="True" AlternatingRowBackground="#F0F0F0" GridLinesVisibility="Horizontal"/>
         </Grid>
     </Grid>
 </Window>
