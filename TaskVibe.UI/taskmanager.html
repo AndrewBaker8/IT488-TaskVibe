@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Task management</title>
+
+<style>
+
+
+.glow {
+
+  font-size: 70px;
+  color: #000;
+  
+  animation: glow 1s ease-in-out infinite alternate;
+
+  text-shadow:  0 0 30px #ff4da6,
+   0 0 5px #ff4da6, 
+   0 0 10px #ff4da6, 
+    0 0 20px #ff4da6,
+     0 0 40px #ff4da6, 0 0 60px #ff4da6;
+}
+
+
+
+@keyframes glow {
+  from {
+    text-shadow:
+    0 0 5px #ff4da6, 
+    0 0 10px #ff4da6;
+   
+ 
+  }
+
+   to {
+    text-shadow: 0 0 20px #fff, 
+    0 0 30px #ff4da6, 
+    0 0 40px #ff4da6, 
+    0 0 50px #ff4da6, 
+    0 0 60px #ff4da6, 
+    0 0 70px #ff4da6, 
+    0 0 80px #ff4da6;
+  }
+}
+  
+
+
+
+
+table {
+  width: 250px;
+  margin-top: 40px;
+  
+}
+
+table, th, td {
+  border: 3px solid black;
+  color:#333;
+  
+}
+
+
+tr:hover td {
+  background-color: #f2f2f2;
+}
+
+th {
+   
+  background-color: #ffe6f3;
+  color: 000;
+  font-weight: bold;
+
+}
+
+td {
+  background-color: #fff;
+}
+
+th, td {
+  text-align: center;
+  
+}
+
+#testbox {
+  margin-top: 20px;
+}
+</style>
+
+</head>
+<body>
+
+<h1 class="glow">Task Management App</h1>
+
+<div id="testbox">
+    <input type="text" id="input" placeholder="Enter task..." />
+    <button onclick="addTask()">Submit</button>
+</div>
+
+<table>
+    <tr>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Role</th>
+        <th>Due Date</th>
+    </tr>
+    <tbody id="taskTable"></tbody>
+</table>
+
+<script>
+function addTask() {
+    const text = document.getElementById("input").value.trim();
+    if (text === "") return;
+
+    const table = document.getElementById("taskTable");
+    const row = document.createElement("tr");
+
+    const taskCell = document.createElement("td");
+    taskCell.textContent = text;
+
+    const statusCell = document.createElement("td");
+    const selectBox = document.createElement("select");
+
+    const options = ["Select...", "Complete", "Not Done", "In Progress"];
+    options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        selectBox.appendChild(option);
+    });
+
+    statusCell.appendChild(selectBox);
+
+ 
+
+     const roleCell = document.createElement("td");
+
+
+          roleCell.style.display = "flex";
+      roleCell.style.flexDirection = "column";
+          roleCell.style.alignItems = "flex-start";
+     
+
+     const roles = ["Julian", "Tamarra", "Andrew"];
+
+roles.forEach(role => {
+  const label = document.createElement("label");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = role;
+
+  label.appendChild(checkbox);
+  label.append(" " + role + " ");
+  roleCell.appendChild(label);
+});
+
+const dataCell = document.createElement("td");
+const dataInput = document.createElement("input");
+dataInput.type = "date";
+dataCell.appendChild(dataInput);
+
+
+  row.appendChild(taskCell);
+    row.appendChild(statusCell);
+    row.appendChild(roleCell);
+    row.appendChild(dataCell);
+      table.appendChild(row);
+
+    document.getElementById("input").value = "";
+
+}
+
+
+
+</script>
+
+</body>
+</html>
