@@ -17,7 +17,7 @@
 
         <!-- LEFT PANEL: Task Entry Form -->
         <StackPanel Grid.Column="0" Margin="15">
-            <TextBlock Text="Create New Task" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+            <TextBlock Text="Task Management" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
 
             <!-- Task Title -->
             <TextBlock Text="Task Title" FontWeight="SemiBold" Margin="0,0,0,5"/>
@@ -35,14 +35,53 @@
                 <ComboBoxItem Content="Completed"/>
             </ComboBox>
 
-            <!-- Create Task Button -->
-            <Button x:Name="BtnCreateTask" Content="Add Task" Height="35" Background="#007ACC" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" Click="BtnCreateTask_Click"/>
-            <!-- Update Task Button -->
-            <Button x:Name="BtnUpdateTask" Content="Update Task" Click="BtnUpdateTask_Click" Margin="0,5,0,0" Height="30"/>
-            <!-- Delete Task Button -->
-            <Button x:Name="BtnDeleteTask" Content="Delete Task" Click="BtnDeleteTask_Click" Margin="0,5,0,0" Height="30" Background="#FFF0F0" Foreground="#C00000"/>
+            <!-- 1. CREATE MODE PANEL (Visible by Default) -->
+            <StackPanel x:Name="PnlCreateMode" Visibility="Visible" Margin="0,5,0,0">
+                <Button x:Name="BtnCreateTask" 
+                        Content="Add Task" 
+                        Height="35" 
+                        Background="#007ACC" 
+                        Foreground="White" 
+                        FontWeight="Bold" 
+                        Click="BtnCreateTask_Click"/>
+            </StackPanel>
 
-            <Separator Margin="0,15,0,15"/>
+            <!-- 2. EDIT/DELETE MODE PANEL (Hidden by Default) -->
+            <StackPanel x:Name="PnlEditMode" Visibility="Collapsed" Margin="0,5,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="BtnUpdateTask" 
+                            Grid.Column="0" 
+                            Content="Update" 
+                            Height="35" 
+                            Margin="0,0,3,0" 
+                            Click="BtnUpdateTask_Click"/>
+
+                    <Button x:Name="BtnDeleteTask" 
+                            Grid.Column="1" 
+                            Content="Delete" 
+                            Height="35" 
+                            Margin="2,0,2,0" 
+                            Background="#FFF0F0" 
+                            Foreground="#C00000" 
+                            FontWeight="SemiBold" 
+                            Click="BtnDeleteTask_Click"/>
+
+                    <Button x:Name="BtnCancelEdit" 
+                            Grid.Column="2" 
+                            Content="Cancel" 
+                            Height="35" 
+                            Margin="3,0,0,0" 
+                            Click="BtnCancelEdit_Click"/>
+                </Grid>
+            </StackPanel>
+
+            <Separator Margin="0,20,0,15"/>
 
             <!-- Dev Tools: Keep your test button safe right here at the bottom -->
             <TextBlock Text="Developer Utilities" FontSize="11" Foreground="Gray" Margin="0,0,0,5"/>
@@ -51,7 +90,65 @@
 
         <!-- RIGHT PANEL: Main Task Dashboard Grid -->
         <Grid Grid.Column="1" Margin="15">
-            <DataGrid x:Name="DgTasks" AutoGenerateColumns="True" AutoGeneratingColumn="DgTasks_AutoGeneratingColumn" SelectionChanged="DgTasks_SelectionChanged" SelectionMode="Single" SelectionUnit="FullRow" IsReadOnly="True" AlternatingRowBackground="#F0F0F0" GridLinesVisibility="Horizontal"/>
+            <DataGrid x:Name="DgTasks" 
+                      AutoGenerateColumns="False" 
+                      IsReadOnly="True" 
+                      SelectionMode="Single"
+                      SelectionChanged="DgTasks_SelectionChanged"
+                      Grid.Row="1" Margin="0,10,0,0">
+                <DataGrid.Columns>
+                    <!-- Standard Text Columns for Title & Due Date -->
+                    <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
+                    <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=\{0:MM/dd/yyyy\}}" Width="120" />
+
+                    <!-- Custom Badged Column for Status -->
+                    <DataGridTemplateColumn Header="Status" Width="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border x:Name="StatusBadge"
+                                        CornerRadius="12"
+                                        Padding="8,3"
+                                        Width="95"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                    <TextBlock x:Name="TxtStatus"
+                                               Text="{Binding Status}"
+                                               FontWeight="SemiBold"
+                                               FontSize="11"
+                                               TextAlignment="Center"
+                                               HorizontalAlignment="Stretch" />
+                                </Border>
+
+                                <DataTemplate.Triggers>
+                                    <!-- 1. NOT STARTED (Gray / Slate) -->
+                                    <DataTrigger Binding="{Binding Status}" Value="Not Started">
+                                        <Setter TargetName="StatusBadge" Property="Background" Value="#E2E8F0" />
+                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#475569" />
+                                    </DataTrigger>
+
+                                    <!-- 2. IN PROGRESS (Blue) -->
+                                    <DataTrigger Binding="{Binding Status}" Value="In Process">
+                                        <Setter TargetName="StatusBadge" Property="Background" Value="#DBEAFE" />
+                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#1E40AF" />
+                                    </DataTrigger>
+
+                                    <!-- 3. COMPLETED (Green) -->
+                                    <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                        <Setter TargetName="StatusBadge" Property="Background" Value="#DCFCE7" />
+                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#15803D" />
+                                    </DataTrigger>
+
+                                    <!-- 4. LATE (Red / Warning) -->
+                                    <DataTrigger Binding="{Binding Status}" Value="Late">
+                                        <Setter TargetName="StatusBadge" Property="Background" Value="#FEE2E2" />
+                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#B91C1C" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
         </Grid>
     </Grid>
 </Window>

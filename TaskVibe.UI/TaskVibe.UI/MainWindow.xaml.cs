@@ -3,19 +3,56 @@ using System;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls;
-using TaskVibe.UI.Data; 
+using TaskVibe.UI.Data;
 
 namespace TaskVibe.UI
 {
     public partial class MainWindow : Window
     {
+        private int _selectedTaskId = -1; // -1 means no task is selected (Create Mode)
+
         public MainWindow()
         {
             InitializeComponent();
-            LoadTasks(); //Pulls existing tasks on startup
+            LoadTasks(); // Pulls existing tasks on startup
         }
 
-        private int _selectedTaskId = -1; // -1 means no task is selected yet
+        #region Helper Methods (State Management)
+
+        /// <summary>
+        /// Toggles visibility between Create Mode and Edit Mode panels
+        /// and resets all form inputs when switching back to Create Mode.
+        /// </summary>
+        private void SetFormState(bool isEditMode)
+        {
+            if (isEditMode)
+            {
+                PnlCreateMode.Visibility = Visibility.Collapsed;
+                PnlEditMode.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                PnlCreateMode.Visibility = Visibility.Visible;
+                PnlEditMode.Visibility = Visibility.Collapsed;
+                ResetForm();
+            }
+        }
+
+        /// <summary>
+        /// Clears all input controls, unselects grid items, and resets the tracking ID.
+        /// </summary>
+        private void ResetForm()
+        {
+            _selectedTaskId = -1;
+            TxtTaskTitle.Clear();
+            DpDueDate.SelectedDate = null;
+            CmbStatus.SelectedIndex = 0;
+            DgTasks.UnselectAll();
+        }
+
+        #endregion
+
+        #region CRUD Button Operations
 
         private void BtnCreateTask_Click(object sender, RoutedEventArgs e)
         {
@@ -41,35 +78,27 @@ namespace TaskVibe.UI
 
             try
             {
-                // 1. Establish connection using your factory
                 using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
                 {
                     conn.Open();
 
-                    // 2. Draft the SQL parameter query (prevents SQL injection)
                     string query = @"INSERT INTO dbo.Tasks (Title, DueDate, Status) 
-                             VALUES (@Title, @DueDate, @Status);";
+                                     VALUES (@Title, @DueDate, @Status);";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        // 3. Bind the UI values safely to the parameters
                         cmd.Parameters.AddWithValue("@Title", taskTitle);
                         cmd.Parameters.AddWithValue("@DueDate", dueDate.Value);
                         cmd.Parameters.AddWithValue("@Status", status);
 
-                        // 4. Execute the command
                         cmd.ExecuteNonQuery();
                     }
                 }
 
-                // 5. Success feedback and form reset
                 MessageBox.Show("Task successfully saved to the database!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                TxtTaskTitle.Clear();
-                DpDueDate.SelectedDate = null;
-                CmbStatus.SelectedIndex = 0;
-
-                // Refresh the DataGrid so the new task appears instanstly
+                // Reset form inputs and refresh the DataGrid
+                ResetForm();
                 LoadTasks();
             }
             catch (Exception ex)
@@ -100,19 +129,16 @@ namespace TaskVibe.UI
                 {
                     conn.Open();
 
-                    // SQL Update Query targeting the selected TaskId
                     string query = @"UPDATE dbo.Tasks 
-                             SET Title = @Title, DueDate = @DueDate, Status = @Status 
-                             WHERE TaskId = @TaskId;";
+                                     SET Title = @Title, DueDate = @DueDate, Status = @Status 
+                                     WHERE TaskId = @TaskId;";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        // Sanitize inputs using parameters
                         cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
                         cmd.Parameters.AddWithValue("@Title", TxtTaskTitle.Text.Trim());
                         cmd.Parameters.AddWithValue("@DueDate", DpDueDate.SelectedDate.Value);
 
-                        // Get the text from the selected ComboBoxItem
                         string selectedStatus = (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started";
                         cmd.Parameters.AddWithValue("@Status", selectedStatus);
 
@@ -122,13 +148,8 @@ namespace TaskVibe.UI
                         {
                             MessageBox.Show("Task updated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                            // 3. Reset the form and clear tracking variable
-                            TxtTaskTitle.Clear();
-                            DpDueDate.SelectedDate = null;
-                            CmbStatus.SelectedIndex = 0;
-                            _selectedTaskId = -1;
-
-                            // 4. Refresh the grid immediately to see the changes
+                            // Switch back to Create Mode and refresh grid
+                            SetFormState(isEditMode: false);
                             LoadTasks();
                         }
                     }
@@ -142,14 +163,12 @@ namespace TaskVibe.UI
 
         private void BtnDeleteTask_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Ensure a task is actually selected
             if (_selectedTaskId == -1)
             {
                 MessageBox.Show("Please select a task from the grid first to delete.", "No Task Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 2. Security/UX: Ask the user to confirm the deletion
             MessageBoxResult result = MessageBox.Show(
                 $"Are you sure you want to permanently delete the selected task: \"{TxtTaskTitle.Text}\"?",
                 "Confirm Delete",
@@ -157,7 +176,6 @@ namespace TaskVibe.UI
                 MessageBoxImage.Warning
             );
 
-            // If they change their mind, exit immediately
             if (result == MessageBoxResult.No) return;
 
             try
@@ -166,7 +184,6 @@ namespace TaskVibe.UI
                 {
                     conn.Open();
 
-                    // SQL query targeting the tracked TaskId
                     string query = "DELETE FROM dbo.Tasks WHERE TaskId = @TaskId;";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -179,13 +196,8 @@ namespace TaskVibe.UI
                         {
                             MessageBox.Show("Task deleted successfully.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                            // 3. Reset the entry form and tracking variable
-                            TxtTaskTitle.Clear();
-                            DpDueDate.SelectedDate = null;
-                            CmbStatus.SelectedIndex = 0;
-                            _selectedTaskId = -1;
-
-                            // 4. Instantly refresh the grid
+                            // Switch back to Create Mode and refresh grid
+                            SetFormState(isEditMode: false);
                             LoadTasks();
                         }
                     }
@@ -197,6 +209,16 @@ namespace TaskVibe.UI
             }
         }
 
+        private void BtnCancelEdit_Click(object sender, RoutedEventArgs e)
+        {
+            // Exit Edit Mode and restore the form back to Create Mode
+            SetFormState(isEditMode: false);
+        }
+
+        #endregion
+
+        #region DataGrid & Database Loading Methods
+
         private void LoadTasks()
         {
             try
@@ -205,7 +227,6 @@ namespace TaskVibe.UI
                 {
                     conn.Open();
 
-                    // Query all tasks
                     string query = "SELECT TaskId, Title, DueDate, Status FROM dbo.Tasks;";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -215,8 +236,7 @@ namespace TaskVibe.UI
                             DataTable dt = new DataTable();
                             adapter.Fill(dt);
 
-                            // Automated "Late" status logic:
-                            // Loop through the rows to check if an active task has passed its due date
+                            // Automated "Late" status calculation for active overdue items
                             foreach (DataRow row in dt.Rows)
                             {
                                 string currentStatus = row["Status"]?.ToString() ?? "";
@@ -228,11 +248,9 @@ namespace TaskVibe.UI
                                 }
                             }
 
-                            // Create a DataView to handle automatic sorting by Due Date
                             DataView dv = dt.DefaultView;
                             dv.Sort = "DueDate ASC";
 
-                            // Bind the populated table directly to the DataGrid UI element
                             DgTasks.ItemsSource = null;
                             DgTasks.ItemsSource = dt.DefaultView;
                         }
@@ -247,7 +265,6 @@ namespace TaskVibe.UI
 
         private void DgTasks_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
-            // If the grid tries to build a column for TaskId, cancel it immediately
             if (e.PropertyName == "TaskId")
             {
                 e.Cancel = true;
@@ -256,27 +273,23 @@ namespace TaskVibe.UI
 
         private void DgTasks_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Temporary Debug Alert
-            MessageBox.Show("Grid row clicked!");
+            // If the grid row selection is cleared (or during grid rebind), revert back to Create Mode
+            if (DgTasks.SelectedItem == null)
+            {
+                return;
+            }
 
-            // If the user clears selection or the grid refreshes, do nothing
-            if (DgTasks.SelectedItem == null) return;
-
-            // Cast the selected item to a DataRowView (since we bound it to a DataTable/DataView)
             if (DgTasks.SelectedItem is DataRowView row)
             {
-                // 1. Store the TaskId securely behind the scenes
+                // 1. Store the primary key
                 _selectedTaskId = Convert.ToInt32(row["TaskId"]);
 
-                // 2. Populate the UI input fields with the current values
+                // 2. Map row fields into controls
                 TxtTaskTitle.Text = row["Title"]?.ToString() ?? "";
                 DpDueDate.SelectedDate = Convert.ToDateTime(row["DueDate"]);
 
-                // 3. Match the ComboBox text to the status
                 string currentStatus = row["Status"]?.ToString() ?? "Not Started";
 
-                // If your logic turned it into "Late", let's map it back to "In Progress" or "Not Started" 
-                // depending on what options your ComboBox has, or just select it directly:
                 foreach (ComboBoxItem item in CmbStatus.Items)
                 {
                     if (item.Content.ToString() == currentStatus)
@@ -285,8 +298,15 @@ namespace TaskVibe.UI
                         break;
                     }
                 }
+
+                // 3. Reveal Edit/Delete mode controls dynamically
+                SetFormState(isEditMode: true);
             }
         }
+
+        #endregion
+
+        #region Developer Utilities
 
         private void TestConnection_Click(object sender, RoutedEventArgs e)
         {
@@ -316,5 +336,7 @@ namespace TaskVibe.UI
                 MessageBox.Show("Connection Failed:" + Environment.NewLine + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        #endregion
     }
 }
