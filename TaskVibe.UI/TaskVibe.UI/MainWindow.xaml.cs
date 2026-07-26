@@ -69,7 +69,8 @@ namespace TaskVibe.UI
                 DpDueDate.SelectedDate = null;
                 CmbStatus.SelectedIndex = 0;
 
-                // TODO: Refresh the DataGrid on the right so the new task appears instantly!
+                // Refresh the DataGrid so the new task appears instanstly
+                LoadTasks();
             }
             catch (Exception ex)
             {
@@ -232,6 +233,7 @@ namespace TaskVibe.UI
                             dv.Sort = "DueDate ASC";
 
                             // Bind the populated table directly to the DataGrid UI element
+                            DgTasks.ItemsSource = null;
                             DgTasks.ItemsSource = dt.DefaultView;
                         }
                     }
