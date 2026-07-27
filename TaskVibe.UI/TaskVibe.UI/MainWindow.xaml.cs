@@ -1,16 +1,312 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using System;
+using System.Data;
 using System.Windows;
-using Microsoft.Data.SqlClient;
-using TaskVibe.UI.Data; // Updated to match your current namespace
+using System.Windows.Controls;
+using TaskVibe.UI.Data;
 
 namespace TaskVibe.UI
 {
     public partial class MainWindow : Window
     {
+        private int _selectedTaskId = -1; // -1 means no task is selected (Create Mode)
+
         public MainWindow()
         {
             InitializeComponent();
+            LoadTasks(); // Pulls existing tasks on startup
         }
+
+        #region Helper Methods (State Management)
+
+        /// <summary>
+        /// Toggles visibility between Create Mode and Edit Mode panels
+        /// and resets all form inputs when switching back to Create Mode.
+        /// </summary>
+        private void SetFormState(bool isEditMode)
+        {
+            if (isEditMode)
+            {
+                PnlCreateMode.Visibility = Visibility.Collapsed;
+                PnlEditMode.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                PnlCreateMode.Visibility = Visibility.Visible;
+                PnlEditMode.Visibility = Visibility.Collapsed;
+                ResetForm();
+            }
+        }
+
+        /// <summary>
+        /// Clears all input controls, unselects grid items, and resets the tracking ID.
+        /// </summary>
+        private void ResetForm()
+        {
+            _selectedTaskId = -1;
+            TxtTaskTitle.Clear();
+            DpDueDate.SelectedDate = null;
+            CmbStatus.SelectedIndex = 0;
+            DgTasks.UnselectAll();
+        }
+
+        #endregion
+
+        #region CRUD Button Operations
+
+        private void BtnCreateTask_Click(object sender, RoutedEventArgs e)
+        {
+            // 1. Capture the inputs from the UI controls
+            string taskTitle = TxtTaskTitle.Text.Trim();
+            DateTime? dueDate = DpDueDate.SelectedDate;
+
+            // Get the text content of the selected ComboBoxItem
+            string status = (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started";
+
+            // 2. Basic Validation
+            if (string.IsNullOrEmpty(taskTitle))
+            {
+                MessageBox.Show("Please enter a task title.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (dueDate == null)
+            {
+                MessageBox.Show("Please select a valid due date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                {
+                    conn.Open();
+
+                    string query = @"INSERT INTO dbo.Tasks (Title, DueDate, Status) 
+                                     VALUES (@Title, @DueDate, @Status);";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Title", taskTitle);
+                        cmd.Parameters.AddWithValue("@DueDate", dueDate.Value);
+                        cmd.Parameters.AddWithValue("@Status", status);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                MessageBox.Show("Task successfully saved to the database!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Reset form inputs and refresh the DataGrid
+                ResetForm();
+                LoadTasks();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving task: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnUpdateTask_Click(object sender, RoutedEventArgs e)
+        {
+            // 1. Validation: Ensure a task is actually selected
+            if (_selectedTaskId == -1)
+            {
+                MessageBox.Show("Please select a task from the grid first to update.", "No Task Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 2. Validation: Ensure inputs aren't empty
+            if (string.IsNullOrWhiteSpace(TxtTaskTitle.Text) || DpDueDate.SelectedDate == null)
+            {
+                MessageBox.Show("Task Title and Due Date cannot be blank.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                {
+                    conn.Open();
+
+                    string query = @"UPDATE dbo.Tasks 
+                                     SET Title = @Title, DueDate = @DueDate, Status = @Status 
+                                     WHERE TaskId = @TaskId;";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
+                        cmd.Parameters.AddWithValue("@Title", TxtTaskTitle.Text.Trim());
+                        cmd.Parameters.AddWithValue("@DueDate", DpDueDate.SelectedDate.Value);
+
+                        string selectedStatus = (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started";
+                        cmd.Parameters.AddWithValue("@Status", selectedStatus);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            MessageBox.Show("Task updated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                            // Switch back to Create Mode and refresh grid
+                            SetFormState(isEditMode: false);
+                            LoadTasks();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating task: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnDeleteTask_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedTaskId == -1)
+            {
+                MessageBox.Show("Please select a task from the grid first to delete.", "No Task Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBoxResult result = MessageBox.Show(
+                $"Are you sure you want to permanently delete the selected task: \"{TxtTaskTitle.Text}\"?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning
+            );
+
+            if (result == MessageBoxResult.No) return;
+
+            try
+            {
+                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                {
+                    conn.Open();
+
+                    string query = "DELETE FROM dbo.Tasks WHERE TaskId = @TaskId;";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            MessageBox.Show("Task deleted successfully.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                            // Switch back to Create Mode and refresh grid
+                            SetFormState(isEditMode: false);
+                            LoadTasks();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting task: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnCancelEdit_Click(object sender, RoutedEventArgs e)
+        {
+            // Exit Edit Mode and restore the form back to Create Mode
+            SetFormState(isEditMode: false);
+        }
+
+        #endregion
+
+        #region DataGrid & Database Loading Methods
+
+        private void LoadTasks()
+        {
+            try
+            {
+                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                {
+                    conn.Open();
+
+                    string query = "SELECT TaskId, Title, DueDate, Status FROM dbo.Tasks;";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+                        {
+                            DataTable dt = new DataTable();
+                            adapter.Fill(dt);
+
+                            // Automated "Late" status calculation for active overdue items
+                            foreach (DataRow row in dt.Rows)
+                            {
+                                string currentStatus = row["Status"]?.ToString() ?? "";
+                                DateTime dueDate = Convert.ToDateTime(row["DueDate"]);
+
+                                if (currentStatus != "Completed" && dueDate < DateTime.Today)
+                                {
+                                    row["Status"] = "Late";
+                                }
+                            }
+
+                            DataView dv = dt.DefaultView;
+                            dv.Sort = "DueDate ASC";
+
+                            DgTasks.ItemsSource = null;
+                            DgTasks.ItemsSource = dt.DefaultView;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading tasks: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void DgTasks_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+            if (e.PropertyName == "TaskId")
+            {
+                e.Cancel = true;
+            }
+        }
+
+        private void DgTasks_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // If the grid row selection is cleared (or during grid rebind), revert back to Create Mode
+            if (DgTasks.SelectedItem == null)
+            {
+                return;
+            }
+
+            if (DgTasks.SelectedItem is DataRowView row)
+            {
+                // 1. Store the primary key
+                _selectedTaskId = Convert.ToInt32(row["TaskId"]);
+
+                // 2. Map row fields into controls
+                TxtTaskTitle.Text = row["Title"]?.ToString() ?? "";
+                DpDueDate.SelectedDate = Convert.ToDateTime(row["DueDate"]);
+
+                string currentStatus = row["Status"]?.ToString() ?? "Not Started";
+
+                foreach (ComboBoxItem item in CmbStatus.Items)
+                {
+                    if (item.Content.ToString() == currentStatus)
+                    {
+                        CmbStatus.SelectedItem = item;
+                        break;
+                    }
+                }
+
+                // 3. Reveal Edit/Delete mode controls dynamically
+                SetFormState(isEditMode: true);
+            }
+        }
+
+        #endregion
+
+        #region Developer Utilities
 
         private void TestConnection_Click(object sender, RoutedEventArgs e)
         {
@@ -40,5 +336,7 @@ namespace TaskVibe.UI
                 MessageBox.Show("Connection Failed:" + Environment.NewLine + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        #endregion
     }
 }

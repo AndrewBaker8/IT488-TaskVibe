@@ -2,8 +2,8 @@
 BEGIN
     INSERT INTO [dbo].[Users] ([Username], [Email]) VALUES 
     ('AndrewB', 'andrew@taskvibe.com'),
-    ('JulianM', 'julian@taskvibe.com'),
-    ('TaMarraW', 'tamarra@taskvibe.com');
+    ('JulianB', 'julian@taskvibe.com'),
+    ('TaMarraC', 'tamarra@taskvibe.com');
 END
 
 IF NOT EXISTS (SELECT 1 FROM [dbo].[Tasks])
