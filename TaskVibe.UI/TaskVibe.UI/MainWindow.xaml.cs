@@ -1,9 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls;
-using TaskVibe.UI.Data;
 
 namespace TaskVibe.UI
 {
@@ -14,7 +13,10 @@ namespace TaskVibe.UI
         public MainWindow()
         {
             InitializeComponent();
-            LoadTasks(); // Pulls existing tasks on startup
+
+            // Ensure SQLite database & table exist, then load data
+            DatabaseConnectionFactory.EnsureDatabaseCreated();
+            LoadTasks();
         }
 
         #region Helper Methods (State Management)
@@ -78,17 +80,17 @@ namespace TaskVibe.UI
 
             try
             {
-                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection conn = DatabaseConnectionFactory.GetConnection())
                 {
                     conn.Open();
 
-                    string query = @"INSERT INTO dbo.Tasks (Title, DueDate, Status) 
+                    string query = @"INSERT INTO Tasks (Title, DueDate, Status) 
                                      VALUES (@Title, @DueDate, @Status);";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@Title", taskTitle);
-                        cmd.Parameters.AddWithValue("@DueDate", dueDate.Value);
+                        cmd.Parameters.AddWithValue("@DueDate", dueDate.Value.ToString("yyyy-MM-dd"));
                         cmd.Parameters.AddWithValue("@Status", status);
 
                         cmd.ExecuteNonQuery();
@@ -125,19 +127,19 @@ namespace TaskVibe.UI
 
             try
             {
-                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection conn = DatabaseConnectionFactory.GetConnection())
                 {
                     conn.Open();
 
-                    string query = @"UPDATE dbo.Tasks 
+                    string query = @"UPDATE Tasks 
                                      SET Title = @Title, DueDate = @DueDate, Status = @Status 
                                      WHERE TaskId = @TaskId;";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
                         cmd.Parameters.AddWithValue("@Title", TxtTaskTitle.Text.Trim());
-                        cmd.Parameters.AddWithValue("@DueDate", DpDueDate.SelectedDate.Value);
+                        cmd.Parameters.AddWithValue("@DueDate", DpDueDate.SelectedDate.Value.ToString("yyyy-MM-dd"));
 
                         string selectedStatus = (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started";
                         cmd.Parameters.AddWithValue("@Status", selectedStatus);
@@ -180,13 +182,13 @@ namespace TaskVibe.UI
 
             try
             {
-                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection conn = DatabaseConnectionFactory.GetConnection())
                 {
                     conn.Open();
 
-                    string query = "DELETE FROM dbo.Tasks WHERE TaskId = @TaskId;";
+                    string query = "DELETE FROM Tasks WHERE TaskId = @TaskId;";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
 
@@ -223,37 +225,37 @@ namespace TaskVibe.UI
         {
             try
             {
-                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection conn = DatabaseConnectionFactory.GetConnection())
                 {
                     conn.Open();
 
-                    string query = "SELECT TaskId, Title, DueDate, Status FROM dbo.Tasks;";
+                    string query = "SELECT TaskId, Title, DueDate, Status FROM Tasks;";
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
-                        using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+                        DataTable dt = new DataTable();
+                        using (SqliteDataReader reader = cmd.ExecuteReader())
                         {
-                            DataTable dt = new DataTable();
-                            adapter.Fill(dt);
-
-                            // Automated "Late" status calculation for active overdue items
-                            foreach (DataRow row in dt.Rows)
-                            {
-                                string currentStatus = row["Status"]?.ToString() ?? "";
-                                DateTime dueDate = Convert.ToDateTime(row["DueDate"]);
-
-                                if (currentStatus != "Completed" && dueDate < DateTime.Today)
-                                {
-                                    row["Status"] = "Late";
-                                }
-                            }
-
-                            DataView dv = dt.DefaultView;
-                            dv.Sort = "DueDate ASC";
-
-                            DgTasks.ItemsSource = null;
-                            DgTasks.ItemsSource = dt.DefaultView;
+                            dt.Load(reader);
                         }
+
+                        // Automated "Late" status calculation for active overdue items
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            string currentStatus = row["Status"]?.ToString() ?? "";
+                            DateTime dueDate = Convert.ToDateTime(row["DueDate"]);
+
+                            if (currentStatus != "Completed" && dueDate < DateTime.Today)
+                            {
+                                row["Status"] = "Late";
+                            }
+                        }
+
+                        DataView dv = dt.DefaultView;
+                        dv.Sort = "DueDate ASC";
+
+                        DgTasks.ItemsSource = null;
+                        DgTasks.ItemsSource = dt.DefaultView;
                     }
                 }
             }
@@ -312,28 +314,16 @@ namespace TaskVibe.UI
         {
             try
             {
-                using (SqlConnection conn = DatabaseConnectionFactory.CreateConnection())
-                {
-                    conn.Open();
+                // Run database check/creation
+                DatabaseConnectionFactory.EnsureDatabaseCreated();
 
-                    string query = "SELECT Username FROM dbo.Users";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        string userList = "Connected! Seeded Users:" + Environment.NewLine;
-                        while (reader.Read())
-                        {
-                            userList += "- " + reader["Username"] + Environment.NewLine;
-                        }
-
-                        MessageBox.Show(userList, "Database Test Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                }
+                MessageBox.Show("Database connection successful! SQLite taskvibe.db is ready to use.",
+                                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Connection Failed:" + Environment.NewLine + ex.Message, "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Connection Failed:\n{ex.Message}",
+                                "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

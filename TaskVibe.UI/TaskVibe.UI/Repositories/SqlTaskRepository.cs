@@ -1,8 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using TaskVibe.UI.Data;
 using TaskVibe.UI.Models;
 
 namespace TaskVibe.UI.Repositories
@@ -13,21 +12,21 @@ namespace TaskVibe.UI.Repositories
         public bool AddTask(TaskItem task)
         {
             const string query = @"
-                INSERT INTO dbo.Tasks (Title, Description, DueDate, Status, AssignedToUserId)
+                INSERT INTO Tasks (Title, Description, DueDate, Status, AssignedToUserId)
                 VALUES (@Title, @Description, @DueDate, @Status, @AssignedToUserId);";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
                         // Using parameters to securely pass data and prevent SQL injection
-                        command.Parameters.Add("@Title", SqlDbType.NVarChar, 100).Value = task.Title;
-                        command.Parameters.Add("@Description", SqlDbType.NVarChar, -1).Value = (object)task.Description ?? DBNull.Value;
-                        command.Parameters.Add("@DueDate", SqlDbType.DateTime).Value = (object)task.DueDate ?? DBNull.Value;
-                        command.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = task.Status ?? "In Process";
-                        command.Parameters.Add("@AssignedToUserId", SqlDbType.Int).Value = (object)task.AssignedToUserId ?? DBNull.Value;
+                        command.Parameters.AddWithValue("@Title", task.Title);
+                        command.Parameters.AddWithValue("@Description", (object?)task.Description ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@DueDate", task.DueDate.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@Status", task.Status ?? "In Process");
+                        command.Parameters.AddWithValue("@AssignedToUserId", (object?)task.AssignedToUserId ?? DBNull.Value);
 
                         connection.Open();
                         int rowsAffected = command.ExecuteNonQuery();
@@ -35,7 +34,7 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 // Logs the exception to the Output Window during debugging
                 System.Diagnostics.Debug.WriteLine($"Database error in AddTask: {ex.Message}");
@@ -46,16 +45,16 @@ namespace TaskVibe.UI.Repositories
         public IEnumerable<TaskItem> GetAllTasks()
         {
             List<TaskItem> tasks = new List<TaskItem>();
-            const string query = "SELECT TaskId, Title, Description, DueDate, Status, AssignedToUserId FROM dbo.Tasks;";
+            const string query = "SELECT TaskId, Title, Description, DueDate, Status, AssignedToUserId FROM Tasks;";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
                         connection.Open();
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        using (SqliteDataReader reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
@@ -65,7 +64,7 @@ namespace TaskVibe.UI.Repositories
                                     Title = reader.GetString(reader.GetOrdinal("Title")),
                                     // Handling potential database NULL values safely
                                     Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
-                                    DueDate = reader.GetDateTime(reader.GetOrdinal("DueDate")),
+                                    DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? DateTime.MinValue : Convert.ToDateTime(reader.GetString(reader.GetOrdinal("DueDate"))),
                                     Status = reader.IsDBNull(reader.GetOrdinal("Status")) ? "In Process" : reader.GetString(reader.GetOrdinal("Status")),
                                     AssignedToUserId = reader.IsDBNull(reader.GetOrdinal("AssignedToUserId")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("AssignedToUserId"))
                                 };
@@ -76,10 +75,9 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Database error in GetAllTasks: {ex.Message}");
-                // Return whatever tasks we managed to safely harvest before the error, or an empty list
             }
 
             return tasks;
@@ -88,18 +86,18 @@ namespace TaskVibe.UI.Repositories
         public IEnumerable<TaskItem> GetTasksByUserId(int userId)
         {
             List<TaskItem> tasks = new List<TaskItem>();
-            const string query = "SELECT TaskId, Title, Description, DueDate, Status, AssignedToUserId FROM dbo.Tasks WHERE AssignedToUserId = @AssignedToUserId;";
+            const string query = "SELECT TaskId, Title, Description, DueDate, Status, AssignedToUserId FROM Tasks WHERE AssignedToUserId = @AssignedToUserId;";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
-                        command.Parameters.Add("@AssignedToUserId", SqlDbType.Int).Value = userId;
+                        command.Parameters.AddWithValue("@AssignedToUserId", userId);
 
                         connection.Open();
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        using (SqliteDataReader reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
@@ -108,8 +106,7 @@ namespace TaskVibe.UI.Repositories
                                     TaskId = reader.GetInt32(reader.GetOrdinal("TaskId")),
                                     Title = reader.GetString(reader.GetOrdinal("Title")),
                                     Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
-                                    // Using Option A: strict DateTime matching your model
-                                    DueDate = reader.GetDateTime(reader.GetOrdinal("DueDate")),
+                                    DueDate = reader.IsDBNull(reader.GetOrdinal("DueDate")) ? DateTime.MinValue : Convert.ToDateTime(reader.GetString(reader.GetOrdinal("DueDate"))),
                                     Status = reader.IsDBNull(reader.GetOrdinal("Status")) ? "In Process" : reader.GetString(reader.GetOrdinal("Status")),
                                     AssignedToUserId = reader.IsDBNull(reader.GetOrdinal("AssignedToUserId")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("AssignedToUserId"))
                                 };
@@ -120,7 +117,7 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Database error in GetTasksByUserId: {ex.Message}");
             }
@@ -130,16 +127,16 @@ namespace TaskVibe.UI.Repositories
 
         public bool UpdateTaskStatus(int taskId, string status)
         {
-            const string query = "UPDATE dbo.Tasks SET Status = @Status WHERE TaskId = @TaskId;";
+            const string query = "UPDATE Tasks SET Status = @Status WHERE TaskId = @TaskId;";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
-                        command.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = (object)status ?? "In Process";
-                        command.Parameters.Add("@TaskId", SqlDbType.Int).Value = taskId;
+                        command.Parameters.AddWithValue("@Status", (object)status ?? "In Process");
+                        command.Parameters.AddWithValue("@TaskId", taskId);
 
                         connection.Open();
                         int rowsAffected = command.ExecuteNonQuery();
@@ -147,7 +144,7 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Database error in UpdateTaskStatus: {ex.Message}");
                 return false;
@@ -156,16 +153,16 @@ namespace TaskVibe.UI.Repositories
 
         public bool UpdateTaskDeadline(int taskId, DateTime newDeadline)
         {
-            const string query = "UPDATE dbo.Tasks SET DueDate = @DueDate WHERE TaskId = @TaskId;";
+            const string query = "UPDATE Tasks SET DueDate = @DueDate WHERE TaskId = @TaskId;";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
-                        command.Parameters.Add("@DueDate", SqlDbType.DateTime).Value = newDeadline;
-                        command.Parameters.Add("@TaskId", SqlDbType.Int).Value = taskId;
+                        command.Parameters.AddWithValue("@DueDate", newDeadline.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@TaskId", taskId);
 
                         connection.Open();
                         int rowsAffected = command.ExecuteNonQuery();
@@ -173,7 +170,7 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Database error in UpdateTaskDeadline: {ex.Message}");
                 return false;
@@ -182,15 +179,15 @@ namespace TaskVibe.UI.Repositories
 
         public bool DeleteTask(int taskId)
         {
-            const string query = "DELETE FROM dbo.Tasks WHERE TaskId = @TaskId;";
+            const string query = "DELETE FROM Tasks WHERE TaskId = @TaskId;";
 
             try
             {
-                using (SqlConnection connection = DatabaseConnectionFactory.CreateConnection())
+                using (SqliteConnection connection = DatabaseConnectionFactory.GetConnection())
                 {
-                    using (SqlCommand command = new SqlCommand(query, connection))
+                    using (SqliteCommand command = new SqliteCommand(query, connection))
                     {
-                        command.Parameters.Add("@TaskId", SqlDbType.Int).Value = taskId;
+                        command.Parameters.AddWithValue("@TaskId", taskId);
 
                         connection.Open();
                         int rowsAffected = command.ExecuteNonQuery();
@@ -198,7 +195,7 @@ namespace TaskVibe.UI.Repositories
                     }
                 }
             }
-            catch (SqlException ex)
+            catch (SqliteException ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Database error in DeleteTask: {ex.Message}");
                 return false;
