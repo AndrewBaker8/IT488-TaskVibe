@@ -24,6 +24,7 @@ namespace TaskVibe.UI
                     CREATE TABLE IF NOT EXISTS Tasks (
                         TaskId INTEGER PRIMARY KEY AUTOINCREMENT,
                         Title TEXT NOT NULL,
+                        Description TEXT,
                         DueDate TEXT NOT NULL,
                         Status TEXT NOT NULL
                     );";

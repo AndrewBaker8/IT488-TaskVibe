@@ -1,18 +1,24 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Data;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using TaskVibe.UI.Models;
+using TaskVibe.UI.Repositories;
 
 namespace TaskVibe.UI
 {
     public partial class MainWindow : Window
     {
         private int _selectedTaskId = -1; // -1 means no task is selected (Create Mode)
+        private readonly SqlTaskRepository _taskRepository;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            _taskRepository = new SqlTaskRepository();
 
             // Ensure SQLite database & table exist, then load data
             DatabaseConnectionFactory.EnsureDatabaseCreated();
@@ -47,6 +53,7 @@ namespace TaskVibe.UI
         {
             _selectedTaskId = -1;
             TxtTaskTitle.Clear();
+            TxtDescription.Clear();
             DpDueDate.SelectedDate = null;
             CmbStatus.SelectedIndex = 0;
             DgTasks.UnselectAll();
@@ -60,6 +67,7 @@ namespace TaskVibe.UI
         {
             // 1. Capture the inputs from the UI controls
             string taskTitle = TxtTaskTitle.Text.Trim();
+            string description = TxtDescription.Text.Trim();
             DateTime? dueDate = DpDueDate.SelectedDate;
 
             // Get the text content of the selected ComboBoxItem
@@ -84,12 +92,13 @@ namespace TaskVibe.UI
                 {
                     conn.Open();
 
-                    string query = @"INSERT INTO Tasks (Title, DueDate, Status) 
-                                     VALUES (@Title, @DueDate, @Status);";
+                    string query = @"INSERT INTO Tasks (Title, Description, DueDate, Status) 
+                                     VALUES (@Title, @Description, @DueDate, @Status);";
 
                     using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@Title", taskTitle);
+                        cmd.Parameters.AddWithValue("@Description", description);
                         cmd.Parameters.AddWithValue("@DueDate", dueDate.Value.ToString("yyyy-MM-dd"));
                         cmd.Parameters.AddWithValue("@Status", status);
 
@@ -99,7 +108,7 @@ namespace TaskVibe.UI
 
                 MessageBox.Show("Task successfully saved to the database!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Reset form inputs and refresh the DataGrid
+                // Reset form inputs, refresh the DataGrid, and update counters
                 ResetForm();
                 LoadTasks();
             }
@@ -111,14 +120,13 @@ namespace TaskVibe.UI
 
         private void BtnUpdateTask_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Validation: Ensure a task is actually selected
+            // 1. Validation
             if (_selectedTaskId == -1)
             {
                 MessageBox.Show("Please select a task from the grid first to update.", "No Task Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 2. Validation: Ensure inputs aren't empty
             if (string.IsNullOrWhiteSpace(TxtTaskTitle.Text) || DpDueDate.SelectedDate == null)
             {
                 MessageBox.Show("Task Title and Due Date cannot be blank.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -132,17 +140,19 @@ namespace TaskVibe.UI
                     conn.Open();
 
                     string query = @"UPDATE Tasks 
-                                     SET Title = @Title, DueDate = @DueDate, Status = @Status 
+                                     SET Title = @Title, 
+                                         Description = @Description, 
+                                         DueDate = @DueDate, 
+                                         Status = @Status 
                                      WHERE TaskId = @TaskId;";
 
                     using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@TaskId", _selectedTaskId);
                         cmd.Parameters.AddWithValue("@Title", TxtTaskTitle.Text.Trim());
+                        cmd.Parameters.AddWithValue("@Description", TxtDescription.Text.Trim());
                         cmd.Parameters.AddWithValue("@DueDate", DpDueDate.SelectedDate.Value.ToString("yyyy-MM-dd"));
-
-                        string selectedStatus = (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started";
-                        cmd.Parameters.AddWithValue("@Status", selectedStatus);
+                        cmd.Parameters.AddWithValue("@Status", (CmbStatus.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Not Started");
 
                         int rowsAffected = cmd.ExecuteNonQuery();
 
@@ -150,7 +160,6 @@ namespace TaskVibe.UI
                         {
                             MessageBox.Show("Task updated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                            // Switch back to Create Mode and refresh grid
                             SetFormState(isEditMode: false);
                             LoadTasks();
                         }
@@ -229,7 +238,7 @@ namespace TaskVibe.UI
                 {
                     conn.Open();
 
-                    string query = "SELECT TaskId, Title, DueDate, Status FROM Tasks;";
+                    string query = "SELECT TaskId, Title, Description, DueDate, Status FROM Tasks;";
 
                     using (SqliteCommand cmd = new SqliteCommand(query, conn))
                     {
@@ -255,7 +264,10 @@ namespace TaskVibe.UI
                         dv.Sort = "DueDate ASC";
 
                         DgTasks.ItemsSource = null;
-                        DgTasks.ItemsSource = dt.DefaultView;
+                        DgTasks.ItemsSource = dv;
+
+                        // Recalculate summary totals whenever data loads
+                        UpdateTaskSummary();
                     }
                 }
             }
@@ -288,6 +300,7 @@ namespace TaskVibe.UI
 
                 // 2. Map row fields into controls
                 TxtTaskTitle.Text = row["Title"]?.ToString() ?? "";
+                TxtDescription.Text = row["Description"]?.ToString() ?? "";
                 DpDueDate.SelectedDate = Convert.ToDateTime(row["DueDate"]);
 
                 string currentStatus = row["Status"]?.ToString() ?? "Not Started";
@@ -308,22 +321,73 @@ namespace TaskVibe.UI
 
         #endregion
 
-        #region Developer Utilities
+        #region Statistics and Data Clear
 
-        private void TestConnection_Click(object sender, RoutedEventArgs e)
+        private void UpdateTaskSummary()
         {
-            try
+            // Query the bound DataView items directly
+            if (DgTasks.ItemsSource is DataView dv)
             {
-                // Run database check/creation
-                DatabaseConnectionFactory.EnsureDatabaseCreated();
+                int total = dv.Count;
+                int completed = 0;
+                int late = 0;
 
-                MessageBox.Show("Database connection successful! SQLite taskvibe.db is ready to use.",
-                                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                foreach (DataRowView rowView in dv)
+                {
+                    string status = rowView["Status"]?.ToString() ?? "";
+                    if (status == "Completed")
+                        completed++;
+                    else if (status == "Late")
+                        late++;
+                }
+
+                // Update TextBlock UI elements
+                TxtTotalCount.Text = total.ToString();
+                TxtCompletedCount.Text = completed.ToString();
+                TxtLateCount.Text = late.ToString();
             }
-            catch (Exception ex)
+        }
+
+        private void BtnClearCompleted_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to remove all completed tasks?",
+                "Confirm Clear",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
             {
-                MessageBox.Show($"Connection Failed:\n{ex.Message}",
-                                "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                try
+                {
+                    using (SqliteConnection conn = DatabaseConnectionFactory.GetConnection())
+                    {
+                        conn.Open();
+
+                        string query = "DELETE FROM Tasks WHERE Status = 'Completed';";
+
+                        using (SqliteCommand cmd = new SqliteCommand(query, conn))
+                        {
+                            int rowsDeleted = cmd.ExecuteNonQuery();
+
+                            if (rowsDeleted > 0)
+                            {
+                                MessageBox.Show($"{rowsDeleted} completed task(s) removed successfully.", "Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show("No completed tasks found to remove.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                        }
+                    }
+
+                    // Reload grid & recalculate metrics
+                    LoadTasks();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error clearing completed tasks: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

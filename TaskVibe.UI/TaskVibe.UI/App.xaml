@@ -4,6 +4,16 @@
              xmlns:local="clr-namespace:TaskVibe.UI"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- TaskVibe Vibrant Palette -->
+        <SolidColorBrush x:Key="VibeTeal" Color="#009688" />
+        <!-- Main UI accent / Create -->
+        <SolidColorBrush x:Key="VibePurple" Color="#8E24AA" />
+        <!-- Status / Update -->
+        <SolidColorBrush x:Key="VibeOrangeRed" Color="#FF3D00" />
+        <!-- Critical / Delete -->
+        <SolidColorBrush x:Key="VibeLightGray" Color="#F5F5F5" />
+        <!-- Alternative Window Background -->
+        <SolidColorBrush x:Key="VibeTextDark" Color="#333333" />
+        <!-- Main Text -->
     </Application.Resources>
 </Application>

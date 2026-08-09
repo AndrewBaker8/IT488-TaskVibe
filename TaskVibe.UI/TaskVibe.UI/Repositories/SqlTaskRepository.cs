@@ -139,8 +139,7 @@ namespace TaskVibe.UI.Repositories
                         command.Parameters.AddWithValue("@TaskId", taskId);
 
                         connection.Open();
-                        int rowsAffected = command.ExecuteNonQuery();
-                        return rowsAffected > 0;
+                        return command.ExecuteNonQuery() > 0;
                     }
                 }
             }
@@ -165,8 +164,7 @@ namespace TaskVibe.UI.Repositories
                         command.Parameters.AddWithValue("@TaskId", taskId);
 
                         connection.Open();
-                        int rowsAffected = command.ExecuteNonQuery();
-                        return rowsAffected > 0;
+                        return command.ExecuteNonQuery() > 0;
                     }
                 }
             }

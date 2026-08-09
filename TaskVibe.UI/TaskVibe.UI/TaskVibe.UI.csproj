@@ -9,9 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TaskVibelogo.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SplashScreen Include="TaskVibelogo.jpg" />
   </ItemGroup>
 
 </Project>

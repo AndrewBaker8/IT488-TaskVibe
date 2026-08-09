@@ -5,150 +5,499 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TaskVibe.UI"
         mc:Ignorable="d"
-        Title="TaskVibe Management System" Height="500" Width="850">
+        Title="TaskVibe Management System" 
+        Height="900" 
+        Width="1200"
+        MinHeight="750" 
+        MinWidth="950"
+        WindowStartupLocation="CenterScreen"
+        Background="#F8FAFC">
+
+    <Window.Resources>
+        <!-- TaskVibe Brand Palette -->
+        <SolidColorBrush x:Key="VibeTeal" Color="#009688" />
+        <SolidColorBrush x:Key="VibePurple" Color="#8E24AA" />
+        <SolidColorBrush x:Key="VibeOrangeRed" Color="#E53935" />
+
+        <!-- 1. ROUNDED BUTTON STYLE -->
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="6" 
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 2. ROUNDED TEXTBOX STYLE -->
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="6"
+                                Padding="8,4">
+                            <ScrollViewer x:Name="PART_ContentHost" Padding="8,4" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#009688"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 3. ROUNDED DATEPICKER STYLE -->
+        <Style TargetType="DatePicker">
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Border CornerRadius="6" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="White" 
+                                Padding="3">
+                            <Grid x:Name="PART_Root" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox" 
+                                                   Grid.Column="0" 
+                                                   Focusable="{TemplateBinding Focusable}" 
+                                                   HorizontalContentAlignment="Stretch" 
+                                                   VerticalContentAlignment="Center"
+                                                   BorderThickness="0" 
+                                                   Background="Transparent"/>
+                                <Button x:Name="PART_Button" 
+                                        Grid.Column="1" 
+                                        Focusable="False" 
+                                        HorizontalAlignment="Right" 
+                                        VerticalAlignment="Top" 
+                                        Width="20" Height="20"
+                                        Background="Transparent"
+                                        BorderThickness="0"/>
+                                <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom" PopupAnimation="Slide" StaysOpen="False"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 4. ROUNDED COMBOBOX STYLE -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="border" 
+                                    Background="White" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="6">
+                                <Grid>
+                                    <ToggleButton x:Name="ToggleButton" 
+                                                  Focusable="False" 
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                                  ClickMode="Press"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"/>
+                                    <ContentPresenter x:Name="ContentSite" 
+                                                      IsHitTestVisible="False" 
+                                                      Content="{TemplateBinding SelectionBoxItem}" 
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
+                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" 
+                                                      Margin="8,0,25,0" 
+                                                      VerticalAlignment="Center" 
+                                                      HorizontalAlignment="Left"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="PlacementRectangle" 
+                                   IsOpen="{TemplateBinding IsDropDownOpen}" 
+                                   AllowsTransparency="True" 
+                                   Focusable="False" 
+                                   PopupAnimation="Slide">
+                                <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="4"/>
+                                    <ScrollViewer Margin="4" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 5. MODERN DATAGRID HEADER STYLE -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource VibeTeal}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}"
+                            BorderBrush="#00796B"
+                            BorderThickness="0,0,1,0">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 6. MODERN DATAGRID ROW SELECTION STYLE -->
+        <Style TargetType="DataGridRow">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Resources>
+                <!-- Selection Colors -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#004D40" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#F1F5F9" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#334155" />
+            </Style.Resources>
+            <Style.Triggers>
+                <!-- Subtle Teal Hover Highlight -->
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F0FDFA"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Grid>
-        <!-- Define our two main sections: Left for Form, Right for Task List -->
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
-            <!-- Fixed width for inputs -->
-            <ColumnDefinition Width="*"/>
-            <!-- Takes up the rest of the screen -->
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="55"/>
+            <!-- Header Bar -->
+            <RowDefinition Height="4"/>
+            <!-- Accent Line -->
+            <RowDefinition Height="*"/>
+            <!-- Main Content -->
+        </Grid.RowDefinitions>
 
-        <!-- LEFT PANEL: Task Entry Form -->
-        <StackPanel Grid.Column="0" Margin="15">
-            <TextBlock Text="Task Management" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+        <!-- HEADER BAR -->
+        <Border Grid.Row="0" Background="{StaticResource VibeTeal}" Padding="15,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="TASK" Foreground="White" FontSize="24" FontWeight="Bold" FontFamily="Segoe UI Semibold"/>
+                    <TextBlock Text="Vibe" Foreground="#E0F2F1" FontSize="24" FontWeight="Light" FontFamily="Segoe UI Light"/>
+                    <TextBlock Text=" |  Task Management System" Foreground="#B2DFDB" FontSize="14" VerticalAlignment="Center" Margin="10,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-            <!-- Task Title -->
-            <TextBlock Text="Task Title" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <TextBox x:Name="TxtTaskTitle" Height="25" Margin="0,0,0,15"/>
-
-            <!-- Due Date -->
-            <TextBlock Text="Due Date" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <DatePicker x:Name="DpDueDate" Height="25" Margin="0,0,0,15"/>
-
-            <!-- Status Selection -->
-            <TextBlock Text="Initial Status" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <ComboBox x:Name="CmbStatus" Height="25" Margin="0,0,0,20" SelectedIndex="0">
-                <ComboBoxItem Content="Not Started"/>
-                <ComboBoxItem Content="In Process"/>
-                <ComboBoxItem Content="Completed"/>
-            </ComboBox>
-
-            <!-- 1. CREATE MODE PANEL (Visible by Default) -->
-            <StackPanel x:Name="PnlCreateMode" Visibility="Visible" Margin="0,5,0,0">
-                <Button x:Name="BtnCreateTask" 
-                        Content="Add Task" 
-                        Height="35" 
-                        Background="#007ACC" 
-                        Foreground="White" 
-                        FontWeight="Bold" 
-                        Click="BtnCreateTask_Click"/>
-            </StackPanel>
-
-            <!-- 2. EDIT/DELETE MODE PANEL (Hidden by Default) -->
-            <StackPanel x:Name="PnlEditMode" Visibility="Collapsed" Margin="0,5,0,0">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="BtnUpdateTask" 
-                            Grid.Column="0" 
-                            Content="Update" 
-                            Height="35" 
-                            Margin="0,0,3,0" 
-                            Click="BtnUpdateTask_Click"/>
-
-                    <Button x:Name="BtnDeleteTask" 
-                            Grid.Column="1" 
-                            Content="Delete" 
-                            Height="35" 
-                            Margin="2,0,2,0" 
-                            Background="#FFF0F0" 
-                            Foreground="#C00000" 
-                            FontWeight="SemiBold" 
-                            Click="BtnDeleteTask_Click"/>
-
-                    <Button x:Name="BtnCancelEdit" 
-                            Grid.Column="2" 
-                            Content="Cancel" 
-                            Height="35" 
-                            Margin="3,0,0,0" 
-                            Click="BtnCancelEdit_Click"/>
-                </Grid>
-            </StackPanel>
-
-            <Separator Margin="0,20,0,15"/>
-
-            <!-- Dev Tools: Keep your test button safe right here at the bottom -->
-            <TextBlock Text="Developer Utilities" FontSize="11" Foreground="Gray" Margin="0,0,0,5"/>
-            <Button x:Name="BtnTestConnection" Content="Test DB Connection" Height="30" Click="TestConnection_Click"/>
+        <!-- VIBE ACCENT RIBBON -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal">
+            <Rectangle Fill="#00BCD4" Width="150"/>
+            <Rectangle Fill="{StaticResource VibePurple}" Width="220"/>
+            <Rectangle Fill="#FF9100" Width="180"/>
+            <Rectangle Fill="{StaticResource VibeOrangeRed}" Width="400"/>
         </StackPanel>
 
-        <!-- RIGHT PANEL: Main Task Dashboard Grid -->
-        <Grid Grid.Column="1" Margin="15">
-            <DataGrid x:Name="DgTasks" 
-                      AutoGenerateColumns="False" 
-                      IsReadOnly="True" 
-                      SelectionMode="Single"
-                      SelectionChanged="DgTasks_SelectionChanged"
-                      Grid.Row="1" Margin="0,10,0,0">
-                <DataGrid.Columns>
-                    <!-- Standard Text Columns for Title & Due Date -->
-                    <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
-                    <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=\{0:MM/dd/yyyy\}}" Width="120" />
+        <!-- MAIN CONTENT BODY -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <!-- Form Inputs -->
+                <ColumnDefinition Width="*"/>
+                <!-- DataGrid -->
+            </Grid.ColumnDefinitions>
 
-                    <!-- Custom Badged Column for Status -->
-                    <DataGridTemplateColumn Header="Status" Width="130">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border x:Name="StatusBadge"
+            <!-- LEFT PANEL: Task Entry Form -->
+            <StackPanel Grid.Column="0" Margin="15">
+
+                <!-- Task Title -->
+                <TextBlock Text="Task Title" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtTaskTitle" Height="32" Margin="0,0,0,12"/>
+
+                <!-- Description -->
+                <TextBlock Text="Description" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtDescription" Height="65" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top" Margin="0,0,0,12"/>
+
+                <!-- Due Date -->
+                <TextBlock Text="Due Date" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>
+
+                <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" Margin="0,0,0,12">
+                    <Calendar x:Name="DpDueDate"
+                              SelectionMode="SingleDate"
+                              BorderBrush="#CBD5E1"
+                              BorderThickness="1"
+                              Background="White"/>
+                </Viewbox>
+
+                <!-- Status Selection -->
+                <TextBlock Text="Initial Status" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>
+                <ComboBox x:Name="CmbStatus" Height="32" VerticalContentAlignment="Center" Margin="0,0,0,15" SelectedIndex="0">
+                    <ComboBoxItem Content="Not Started"/>
+                    <ComboBoxItem Content="In Process"/>
+                    <ComboBoxItem Content="Completed"/>
+                </ComboBox>
+
+                <!-- 1. CREATE MODE PANEL -->
+                <StackPanel x:Name="PnlCreateMode" Visibility="Visible" Margin="0,5,0,0">
+                    <Button x:Name="BtnCreateTask" 
+                            Content="Add Task" 
+                            Height="38" 
+                            Background="{StaticResource VibeTeal}" 
+                            Click="BtnCreateTask_Click"/>
+                </StackPanel>
+
+                <!-- 2. EDIT/DELETE MODE PANEL -->
+                <StackPanel x:Name="PnlEditMode" Visibility="Collapsed" Margin="0,5,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnUpdateTask" 
+                                Grid.Column="0" 
+                                Content="Update" 
+                                Height="38" 
+                                Margin="0,0,3,0" 
+                                Background="{StaticResource VibePurple}"
+                                Click="BtnUpdateTask_Click"/>
+
+                        <Button x:Name="BtnDeleteTask" 
+                                Grid.Column="1" 
+                                Content="Delete" 
+                                Height="38" 
+                                Margin="2,0,2,0" 
+                                Background="{StaticResource VibeOrangeRed}" 
+                                Click="BtnDeleteTask_Click"/>
+
+                        <Button x:Name="BtnCancelEdit" 
+                                Grid.Column="2" 
+                                Content="Cancel" 
+                                Height="38" 
+                                Margin="3,0,0,0" 
+                                Background="#94A3B8"
+                                Click="BtnCancelEdit_Click"/>
+                    </Grid>
+                </StackPanel>
+
+                <Separator Margin="0,15,0,12"/>
+
+                <!-- Dev Tools -->
+                <Border Margin="0,15,0,0" 
+        Padding="12" 
+        Background="#F1F5F9" 
+        CornerRadius="6" 
+        BorderBrush="#CBD5E1" 
+        BorderThickness="1">
+                    <StackPanel>
+                        <!-- Section Header -->
+                        <TextBlock Text="Task Summary" 
+                   FontWeight="Bold" 
+                   FontSize="12" 
+                   Foreground="#475569" 
+                   Margin="0,0,0,8"/>
+
+                        <!-- Statistics Badges -->
+                        <UniformGrid Columns="3" Margin="0,0,0,10">
+                            <Border Background="White" CornerRadius="4" Padding="6,4" Margin="2" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Total" FontSize="10" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtTotalCount" Text="4" FontWeight="Bold" FontSize="13" Foreground="#334155" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="White" CornerRadius="4" Padding="6,4" Margin="2" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Done" FontSize="10" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtCompletedCount" Text="1" FontWeight="Bold" FontSize="13" Foreground="#0D9488" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="White" CornerRadius="4" Padding="6,4" Margin="2" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="Late" FontSize="10" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtLateCount" Text="1" FontWeight="Bold" FontSize="13" Foreground="#E11D48" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Batch Data Action Button -->
+                        <Button x:Name="BtnClearCompleted" 
+                                Content="Clear Completed Tasks" 
+                                Height="28" 
+                                FontSize="11" 
+                                FontWeight="SemiBold"
+                                Background="White" 
+                                Foreground="#475569" 
+                                BorderBrush="#CBD5E1" 
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                Click="BtnClearCompleted_Click"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- RIGHT PANEL: Dashboard DataGrid -->
+            <Grid Grid.Column="1" Margin="15">
+                <Border CornerRadius="8" 
+                        BorderBrush="#009688" 
+                        BorderThickness="5.5" 
+                        Background="{StaticResource VibeTeal}" 
+                        SnapsToDevicePixels="True">
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- White Background for Table Body -->
+                        <Border Grid.Row="1" Background="White" CornerRadius="0,0,7,7"/>
+
+                        <!-- DataGrid -->
+                        <DataGrid x:Name="DgTasks" 
+                                  Grid.RowSpan="2"
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" 
+                                  SelectionMode="Single"
+                                  SelectionChanged="DgTasks_SelectionChanged"
+                                  BorderThickness="0"
+                                  Background="Transparent"
+                                  RowBackground="White"
+                                  AlternatingRowBackground="#F8FAFC"
+                                  HorizontalGridLinesBrush="#E2E8F0"
+                                  VerticalGridLinesBrush="Transparent"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal">
+
+                            <DataGrid.Resources>
+                                <!-- Set this to VibeTeal so the entire header row background is teal -->
+                                <Style TargetType="{x:Type DataGridColumnHeadersPresenter}">
+                                    <Setter Property="Background" Value="{StaticResource VibeTeal}"/>
+                                </Style>
+                            </DataGrid.Resources>
+
+                            <DataGrid.Columns>
+                                <!-- Title Column -->
+                                <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="1.2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Foreground" Value="#1E293B"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="Margin" Value="8,0"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <!-- Description Column -->
+                                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap"/>
+                                            <Setter Property="Foreground" Value="#475569"/>
+                                            <Setter Property="Margin" Value="8,4"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <!-- Due Date Column -->
+                                <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=\{0:yyyy-MM-dd\}}" Width="110">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Medium"/>
+                                            <Setter Property="Foreground" Value="#334155"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="Margin" Value="8,0"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <!-- Status Column with Pill Badges -->
+                                <DataGridTemplateColumn Header="Status" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="StatusBadge"
                                         CornerRadius="12"
-                                        Padding="8,3"
+                                        Padding="8,4"
                                         Width="95"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center">
-                                    <TextBlock x:Name="TxtStatus"
+                                                <TextBlock x:Name="TxtStatus"
                                                Text="{Binding Status}"
-                                               FontWeight="SemiBold"
+                                               FontWeight="Bold"
                                                FontSize="11"
                                                TextAlignment="Center"
                                                HorizontalAlignment="Stretch" />
-                                </Border>
+                                            </Border>
 
-                                <DataTemplate.Triggers>
-                                    <!-- 1. NOT STARTED (Gray / Slate) -->
-                                    <DataTrigger Binding="{Binding Status}" Value="Not Started">
-                                        <Setter TargetName="StatusBadge" Property="Background" Value="#E2E8F0" />
-                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#475569" />
-                                    </DataTrigger>
-
-                                    <!-- 2. IN PROGRESS (Blue) -->
-                                    <DataTrigger Binding="{Binding Status}" Value="In Process">
-                                        <Setter TargetName="StatusBadge" Property="Background" Value="#DBEAFE" />
-                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#1E40AF" />
-                                    </DataTrigger>
-
-                                    <!-- 3. COMPLETED (Green) -->
-                                    <DataTrigger Binding="{Binding Status}" Value="Completed">
-                                        <Setter TargetName="StatusBadge" Property="Background" Value="#DCFCE7" />
-                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#15803D" />
-                                    </DataTrigger>
-
-                                    <!-- 4. LATE (Red / Warning) -->
-                                    <DataTrigger Binding="{Binding Status}" Value="Late">
-                                        <Setter TargetName="StatusBadge" Property="Background" Value="#FEE2E2" />
-                                        <Setter TargetName="TxtStatus" Property="Foreground" Value="#B91C1C" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+                                            <DataTemplate.Triggers>
+                                                <!-- NOT STARTED -->
+                                                <DataTrigger Binding="{Binding Status}" Value="Not Started">
+                                                    <Setter TargetName="StatusBadge" Property="Background" Value="#E2E8F0" />
+                                                    <Setter TargetName="TxtStatus" Property="Foreground" Value="#475569" />
+                                                </DataTrigger>
+                                                <!-- IN PROCESS -->
+                                                <DataTrigger Binding="{Binding Status}" Value="In Process">
+                                                    <Setter TargetName="StatusBadge" Property="Background" Value="#F3E5F5" />
+                                                    <Setter TargetName="TxtStatus" Property="Foreground" Value="#7B1FA2" />
+                                                </DataTrigger>
+                                                <!-- COMPLETED -->
+                                                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                    <Setter TargetName="StatusBadge" Property="Background" Value="#E0F2F1" />
+                                                    <Setter TargetName="TxtStatus" Property="Foreground" Value="#00695C" />
+                                                </DataTrigger>
+                                                <!-- LATE -->
+                                                <DataTrigger Binding="{Binding Status}" Value="Late">
+                                                    <Setter TargetName="StatusBadge" Property="Background" Value="#FFEBEE" />
+                                                    <Setter TargetName="TxtStatus" Property="Foreground" Value="#C62828" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
