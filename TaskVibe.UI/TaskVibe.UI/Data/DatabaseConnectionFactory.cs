@@ -1,44 +1,21 @@
-﻿using System;
-using System.IO;
-using Microsoft.Data.Sqlite;
+﻿using System.Configuration;
+using Microsoft.Data.SqlClient;
 
-namespace TaskVibe.UI
+namespace TaskVibe.UI.Data
 {
     public static class DatabaseConnectionFactory
     {
-        // Path to the local SQLite database file in the application directory
-        private static readonly string DbFileName = "taskvibe.db";
-        public static readonly string ConnectionString = $"Data Source={DbFileName};";
+        private static readonly string ConnectionString =
+            ConfigurationManager.ConnectionStrings["TaskVibeDB"].ConnectionString;
 
-        /// <summary>
-        /// Ensures the SQLite database file and required Tasks table exist on startup.
-        /// </summary>
-        public static void EnsureDatabaseCreated()
+        public static SqlConnection CreateConnection()
         {
-            // Opening the connection automatically creates 'taskvibe.db' if missing
-            using (var conn = new SqliteConnection(ConnectionString))
-            {
-                conn.Open();
-
-                string createTableSql = @"
-                    CREATE TABLE IF NOT EXISTS Tasks (
-                        TaskId INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Title TEXT NOT NULL,
-                        Description TEXT,
-                        DueDate TEXT NOT NULL,
-                        Status TEXT NOT NULL
-                    );";
-
-                using (var cmd = new SqliteCommand(createTableSql, conn))
-                {
-                    cmd.ExecuteNonQuery();
-                }
-            }
+            return new SqlConnection(ConnectionString);
         }
 
-        public static SqliteConnection GetConnection()
+        internal static void EnsureDatabaseCreated()
         {
-            return new SqliteConnection(ConnectionString);
+            throw new NotImplementedException();
         }
     }
 }
