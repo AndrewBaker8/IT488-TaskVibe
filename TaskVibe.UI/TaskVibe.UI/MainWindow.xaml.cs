@@ -19,6 +19,8 @@ namespace TaskVibe.UI
         {
             InitializeComponent();
 
+            DpDueDate.SelectedDate = DateTime.Today;
+
             _taskRepository = new SqlTaskRepository();
 
             // Ensure SQLite database & table exist, then load data
