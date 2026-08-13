@@ -255,7 +255,11 @@
 
                     <!-- Due Date -->
                     <TextBlock Text="Due Date" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>
-                    <DatePicker x:Name="DpDueDate" Height="32" Margin="0,0,0,12"/>
+                    <Border BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="White" Padding="4" Margin="0,0,0,12">
+                        <Viewbox MaxHeight="180">
+                            <Calendar x:Name="DpDueDate" SelectionMode="SingleDate"/>
+                        </Viewbox>
+                    </Border>
 
                     <!-- Status Selection -->
                     <TextBlock Text="Initial Status" FontWeight="SemiBold" Foreground="#555555" Margin="0,0,0,5"/>

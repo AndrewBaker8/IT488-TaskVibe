@@ -57,7 +57,7 @@ namespace TaskVibe.UI
             _selectedTaskId = -1;
             TxtTaskTitle.Clear();
             TxtDescription.Clear();
-            DpDueDate.SelectedDate = null;
+            DpDueDate.SelectedDate = DateTime.Today;
             CmbStatus.SelectedIndex = 0;
             DgTasks.UnselectAll();
         }
