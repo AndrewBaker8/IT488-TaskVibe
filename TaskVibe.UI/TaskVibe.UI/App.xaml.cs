@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using TaskVibe.UI.Data;
 
 namespace TaskVibe.UI
 {
